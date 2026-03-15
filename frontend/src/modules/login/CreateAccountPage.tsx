@@ -33,6 +33,15 @@ export function CreateAccountPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="px-8 py-10">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img
+              src="/pawsnclawslogo.jpg"
+              alt="Paws n Claws Logo"
+              className="w-10 h-10 object-contain"
+            />
+          </div>
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
@@ -131,7 +140,10 @@ export function CreateAccountPage() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full py-2.5 px-4 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition shadow-sm shadow-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+              style={{
+                background: "linear-gradient(to right, #01e7e5, #d90097)",
+              }}
+              className="w-full py-2.5 px-4 text-white text-sm font-semibold rounded-lg transition shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2"
             >
               Create account
             </button>
