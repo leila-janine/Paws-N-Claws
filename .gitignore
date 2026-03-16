@@ -25,3 +25,4 @@ yarn-error.log*
 # local env files (CRITICAL: Prevents leaking database keys)
 .env*.local
 .env
+.env.example
