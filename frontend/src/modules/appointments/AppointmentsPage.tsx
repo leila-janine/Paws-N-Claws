@@ -19,12 +19,28 @@ type Appointment = {
   Special_Notes: string | null;
 };
 
+type Payment = {
+  Appointment_ID: string;
+  Amount: number;
+  Payment_Method: string;
+};
+
 const STATUS_LABELS: Record<string, string> = {
   Pending: "Pending",
   Confirmed: "Confirmed",
   Completed: "Completed",
   Cancelled: "Cancelled",
 };
+
+function parseServiceAndNotes(specialNotes: string | null) {
+  if (!specialNotes) return { service: null, notes: null };
+  const lines = specialNotes.split("\n").map((l) => l.trim());
+  const serviceLine = lines.find((l) => l.toLowerCase().startsWith("service:"));
+  const notesLine = lines.find((l) => l.toLowerCase().startsWith("notes:"));
+  const service = serviceLine ? serviceLine.replace(/service:/i, "").trim() : null;
+  const notes = notesLine ? notesLine.replace(/notes:/i, "").trim() : null;
+  return { service, notes };
+}
 
 function timeOptions() {
   const opts: string[] = [];
@@ -46,6 +62,9 @@ export function AppointmentsPage() {
 
   const [petsById, setPetsById] = useState<Record<string, Pet>>({});
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [paymentsByAppointmentId, setPaymentsByAppointmentId] = useState<
+    Record<string, Payment>
+  >({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -103,7 +122,31 @@ export function AppointmentsPage() {
       petMap[p.Pet_ID] = p;
     });
     setPetsById(petMap);
-    setAppointments(((appts ?? []) as any[]).map((a: any) => ({ ...a, Appointment_ID: String(a.Appointment_ID) })));
+    const apptList = ((appts ?? []) as any[]).map((a: any) => ({
+      ...a,
+      Appointment_ID: String(a.Appointment_ID),
+    })) as Appointment[];
+    setAppointments(apptList);
+
+    const ids = apptList.map((a) => a.Appointment_ID);
+    if (ids.length) {
+      const { data: payments } = await supabase
+        .from("PAYMENT")
+        .select("Appointment_ID, Amount, Payment_Method")
+        .in("Appointment_ID", ids);
+
+      const map: Record<string, Payment> = {};
+      (payments ?? []).forEach((p: any) => {
+        map[String(p.Appointment_ID)] = {
+          Appointment_ID: String(p.Appointment_ID),
+          Amount: Number(p.Amount),
+          Payment_Method: String(p.Payment_Method),
+        };
+      });
+      setPaymentsByAppointmentId(map);
+    } else {
+      setPaymentsByAppointmentId({});
+    }
 
     setLoading(false);
   };
@@ -248,6 +291,9 @@ export function AppointmentsPage() {
               const status = STATUS_LABELS[appt.Status ?? "Pending"] ?? (appt.Status ?? "Pending");
               const isEditing = editingId === appt.Appointment_ID;
               const isLocked = status === "Cancelled" || status === "Completed";
+              const parsed = parseServiceAndNotes(appt.Special_Notes);
+              const payment = paymentsByAppointmentId[appt.Appointment_ID];
+              const isPaid = Boolean(payment);
 
               return (
                 <div
@@ -262,9 +308,20 @@ export function AppointmentsPage() {
                       <p className="mt-1 text-xs text-slate-500">
                         Status: {status}
                       </p>
-                      {appt.Special_Notes && (
-                        <p className="mt-2 text-sm text-slate-600">
-                          {appt.Special_Notes}
+                      <p className="mt-1 text-xs text-slate-500">
+                        Payment:{" "}
+                        {isPaid
+                          ? `Paid (${payment.Payment_Method})`
+                          : "Unpaid"}
+                      </p>
+                      {parsed.service && (
+                        <p className="mt-2 text-sm font-medium text-slate-800">
+                          Service: {parsed.service}
+                        </p>
+                      )}
+                      {parsed.notes && (
+                        <p className="mt-1 text-sm text-slate-600">
+                          Notes: {parsed.notes}
                         </p>
                       )}
                     </div>

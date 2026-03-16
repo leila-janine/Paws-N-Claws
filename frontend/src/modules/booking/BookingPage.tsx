@@ -9,13 +9,57 @@ type Pet = {
   Pet_Name: string;
 };
 
-const SERVICES = [
-  "Full groom",
-  "Bath & tidy",
-  "Nail trim",
-  "De-shedding",
-  "Puppy groom",
+type Service = {
+  Service_ID: string;
+  Service_Name: string;
+  Service_Description: string | null;
+  Service_Price: number;
+};
+
+const DEFAULT_SERVICES: Array<{
+  Service_Name: string;
+  Service_Description: string;
+  Service_Price: number;
+}> = [
+  {
+    Service_Name: "Full groom",
+    Service_Description: "Trim, tidy, and finish with care.",
+    Service_Price: 1200,
+  },
+  {
+    Service_Name: "Bath & tidy",
+    Service_Description: "A fresh reset with gentle products.",
+    Service_Price: 800,
+  },
+  {
+    Service_Name: "Nail trim",
+    Service_Description: "Quick add-on for comfort and hygiene.",
+    Service_Price: 250,
+  },
+  {
+    Service_Name: "De-shedding",
+    Service_Description: "Reduce shedding for a cleaner home.",
+    Service_Price: 950,
+  },
+  {
+    Service_Name: "Puppy groom",
+    Service_Description: "Gentle first-groom experience for pups.",
+    Service_Price: 900,
+  },
 ];
+
+function formatPrice(amount: number) {
+  if (!Number.isFinite(amount)) return "";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "PHP",
+  }).format(amount);
+}
+
+function buildSpecialNotes(serviceName: string, notes: string) {
+  const cleanNotes = notes.trim();
+  return `Service: ${serviceName}${cleanNotes ? `\nNotes: ${cleanNotes}` : ""}`;
+}
 
 export function BookingPage() {
   const supabase = createClient();
@@ -23,12 +67,15 @@ export function BookingPage() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
   const [bookedTimes, setBookedTimes] = useState<Set<string>>(new Set());
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   const [form, setForm] = useState({
     petId: "",
     date: "",
     time: "",
-    service: "",
+    serviceId: "",
+    paymentMethod: "",
     notes: "",
   });
 
@@ -74,6 +121,66 @@ export function BookingPage() {
     };
 
     fetchPets();
+  }, [supabase]);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      setLoadingServices(true);
+      const { data, error } = await supabase
+        .from("SERVICE")
+        .select("Service_ID, Service_Name, Service_Description, Service_Price")
+        .order("Service_Name");
+
+      if (!error) {
+        const parsed =
+          (data ?? []).map((s: any) => ({
+            Service_ID: String(s.Service_ID),
+            Service_Name: String(s.Service_Name),
+            Service_Description:
+              s.Service_Description == null ? null : String(s.Service_Description),
+            Service_Price: Number(s.Service_Price),
+          })) ?? [];
+        if (parsed.length > 0) {
+          setServices(parsed);
+          setLoadingServices(false);
+          return;
+        }
+
+        // If SERVICE table is empty, attempt to seed defaults (will only work if
+        // your Supabase RLS/policies allow inserts for this client).
+        const { error: seedError } = await supabase
+          .from("SERVICE")
+          .insert(DEFAULT_SERVICES);
+
+        if (!seedError) {
+          const { data: seeded } = await supabase
+            .from("SERVICE")
+            .select("Service_ID, Service_Name, Service_Description, Service_Price")
+            .order("Service_Name");
+
+          const seededParsed =
+            (seeded ?? []).map((s: any) => ({
+              Service_ID: String(s.Service_ID),
+              Service_Name: String(s.Service_Name),
+              Service_Description:
+                s.Service_Description == null
+                  ? null
+                  : String(s.Service_Description),
+              Service_Price: Number(s.Service_Price),
+            })) ?? [];
+
+          setServices(seededParsed);
+          setLoadingServices(false);
+          return;
+        }
+
+        setServices([]);
+      }
+
+      setLoadingServices(false);
+    };
+
+    fetchServices();
   }, [supabase]);
 
   useEffect(() => {
@@ -182,24 +289,46 @@ export function BookingPage() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("APPOINTMENT").insert({
-      Customer_ID: user.id,
-      Pet_ID: form.petId,
-      Appointment_Date: form.date,
-      Start_Time: form.time,
-      Status: "Pending",
-      Special_Notes: `${form.service}${form.notes ? ` — ${form.notes}` : ""}`,
-    });
+    const selectedService = services.find((s) => s.Service_ID === form.serviceId);
+    if (!selectedService) {
+      setError("Please select a service.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { data: apptInserted, error: insertError } = await supabase
+      .from("APPOINTMENT")
+      .insert({
+        Customer_ID: user.id,
+        Pet_ID: form.petId,
+        Appointment_Date: form.date,
+        Start_Time: form.time,
+        Total_Price: selectedService.Service_Price,
+        Status: "Pending",
+        Special_Notes: buildSpecialNotes(selectedService.Service_Name, form.notes),
+      })
+      .select("Appointment_ID")
+      .single();
 
     if (insertError) {
       setError(insertError.message);
     } else {
+      // Store simple payment record with chosen method (no external gateway)
+      if (form.paymentMethod) {
+        await supabase.from("PAYMENT").insert({
+          Appointment_ID: apptInserted.Appointment_ID,
+          Amount: selectedService.Service_Price,
+          Payment_Method: form.paymentMethod,
+        });
+      }
+
       setSuccess(true);
       setForm({
         petId: "",
         date: "",
         time: "",
-        service: "",
+        serviceId: "",
+        paymentMethod: "",
         notes: "",
       });
     }
@@ -361,30 +490,94 @@ export function BookingPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Service
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                {SERVICES.map((service) => (
-                  <button
-                    key={service}
-                    type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, service }))}
-                    className={`py-2 text-xs font-medium rounded-lg border transition ${
-                      form.service === service
-                        ? "border-transparent text-white"
-                        : "border-slate-200 text-slate-600 bg-slate-50 hover:border-slate-300"
-                    }`}
-                    style={
-                      form.service === service
-                        ? {
-                            background:
-                              "linear-gradient(to right, #01e7e5, #d90097)",
-                          }
-                        : {}
-                    }
-                  >
-                    {service}
-                  </button>
-                ))}
-              </div>
+              {loadingServices ? (
+                <p className="text-sm text-slate-500">Loading services…</p>
+              ) : services.length === 0 ? (
+                <p className="text-sm text-red-500">
+                  No services found. Add rows to the `SERVICE` table in Supabase
+                  (or allow inserts so the app can seed default services).
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {services.map((service) => {
+                    const selected = form.serviceId === service.Service_ID;
+                    return (
+                      <button
+                        key={service.Service_ID}
+                        type="button"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            serviceId: service.Service_ID,
+                          }))
+                        }
+                        className={`rounded-xl border p-3 text-left transition ${
+                          selected
+                            ? "border-transparent text-white"
+                            : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        }`}
+                        style={
+                          selected
+                            ? {
+                                background:
+                                  "linear-gradient(to right, #01e7e5, #d90097)",
+                              }
+                            : {}
+                        }
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">
+                              {service.Service_Name}
+                            </p>
+                            {service.Service_Description && (
+                              <p
+                                className={`mt-1 text-xs leading-5 ${
+                                  selected ? "text-white/90" : "text-slate-600"
+                                }`}
+                              >
+                                {service.Service_Description}
+                              </p>
+                            )}
+                          </div>
+                          <p
+                            className={`text-sm font-semibold ${
+                              selected ? "text-white" : "text-slate-900"
+                            }`}
+                          >
+                            {formatPrice(service.Service_Price)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Payment method */}
+            <div>
+              <label
+                htmlFor="paymentMethod"
+                className="block text-sm font-medium text-slate-700 mb-1.5"
+              >
+                Payment method
+              </label>
+              <select
+                id="paymentMethod"
+                name="paymentMethod"
+                required
+                value={form.paymentMethod}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
+              >
+                <option value="" disabled>
+                  Select a payment method
+                </option>
+                <option value="Cash">Cash</option>
+                <option value="GCash">GCash</option>
+                <option value="Card on site">Card on site</option>
+              </select>
             </div>
 
             {/* Notes */}
@@ -420,7 +613,8 @@ export function BookingPage() {
                 !form.petId ||
                 !form.date ||
                 !form.time ||
-                !form.service
+                !form.serviceId ||
+                !form.paymentMethod
               }
               style={{
                 background: "linear-gradient(to right, #01e7e5, #d90097)",
