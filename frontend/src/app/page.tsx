@@ -1,27 +1,32 @@
 import Link from "next/link";
+import { DogCarousel } from "@/modules/marketing/DogCarousel";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white text-zinc-950">
-      <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/80 backdrop-blur">
+    <div className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-slate-50/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 text-white shadow-sm">
-              P
+          <Link href="/" className="flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+              <img
+                src="/pawsnclawslogo.jpg"
+                alt="Paws N Claws Logo"
+                className="h-7 w-7 object-contain"
+              />
             </span>
             <span className="text-sm font-semibold tracking-tight sm:text-base">
               Paws N Claws
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm text-zinc-700 sm:flex">
-            <a href="#services" className="hover:text-zinc-950">
+          <nav className="hidden items-center gap-6 text-sm text-slate-700 sm:flex">
+            <a href="#services" className="hover:text-slate-950">
               Services
             </a>
-            <a href="#how" className="hover:text-zinc-950">
+            <a href="#how" className="hover:text-slate-950">
               How it works
             </a>
-            <a href="#hours" className="hover:text-zinc-950">
+            <a href="#hours" className="hover:text-slate-950">
               Hours
             </a>
           </nav>
@@ -29,13 +34,16 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Link
               href="/login"
-              className="hidden rounded-full px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 sm:inline-flex"
+              className="hidden rounded-full px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 sm:inline-flex"
             >
               Log in
             </Link>
             <Link
               href="/booking"
-              className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
+              className="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+              style={{
+                background: "linear-gradient(to right, #01e7e5, #d90097)",
+              }}
             >
               Book now
             </Link>
@@ -46,18 +54,18 @@ export default function Home() {
       <main>
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -top-24 left-1/2 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-emerald-200 via-sky-200 to-violet-200 blur-3xl opacity-70" />
+            <div className="absolute -top-24 left-1/2 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-200 via-sky-200 to-pink-200 blur-3xl opacity-70" />
           </div>
 
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2 lg:items-center">
             <div>
-              <p className="inline-flex items-center rounded-full border border-zinc-200 bg-white/70 px-3 py-1 text-xs font-medium text-zinc-700">
+              <p className="inline-flex items-center rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-700">
                 Online booking • Pet profiles • Appointment tracking
               </p>
               <h1 className="mt-5 text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
                 Modern grooming appointments for busy pet parents.
               </h1>
-              <p className="mt-4 max-w-xl text-pretty text-base leading-7 text-zinc-600 sm:text-lg">
+              <p className="mt-4 max-w-xl text-pretty text-base leading-7 text-slate-600 sm:text-lg">
                 Book, reschedule, or cancel your grooming session anytime.
                 Keep your pet details in one place so every visit is smooth,
                 safe, and consistent.
@@ -66,33 +74,36 @@ export default function Home() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   href="/booking"
-                  className="inline-flex items-center justify-center rounded-full bg-zinc-950 px-5 py-3 text-sm font-medium text-white shadow-sm hover:bg-zinc-800"
+                  className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium text-white shadow-sm hover:opacity-90"
+                  style={{
+                    background: "linear-gradient(to right, #01e7e5, #d90097)",
+                  }}
                 >
                   Start a booking
                 </Link>
                 <Link
                   href="/pets"
-                  className="inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white px-5 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+                  className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-900 hover:bg-slate-50"
                 >
                   Manage pet profiles
                 </Link>
               </div>
 
               <dl className="mt-10 grid grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-zinc-200 bg-white/70 p-4">
-                  <dt className="text-xs font-medium text-zinc-500">
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <dt className="text-xs font-medium text-slate-500">
                     Booking access
                   </dt>
                   <dd className="mt-1 text-lg font-semibold">24/7</dd>
                 </div>
-                <div className="rounded-2xl border border-zinc-200 bg-white/70 p-4">
-                  <dt className="text-xs font-medium text-zinc-500">
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <dt className="text-xs font-medium text-slate-500">
                     Updates
                   </dt>
                   <dd className="mt-1 text-lg font-semibold">Real-time</dd>
                 </div>
-                <div className="rounded-2xl border border-zinc-200 bg-white/70 p-4">
-                  <dt className="text-xs font-medium text-zinc-500">
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <dt className="text-xs font-medium text-slate-500">
                     Status
                   </dt>
                   <dd className="mt-1 text-lg font-semibold">Tracked</dd>
@@ -135,75 +146,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-2xl bg-gradient-to-br from-emerald-50 via-sky-50 to-violet-50 p-6">
-                  <svg
-                    viewBox="0 0 400 200"
-                    role="img"
-                    aria-label="Dog and cat illustration"
-                    className="h-40 w-full"
-                  >
-                    <defs>
-                      <linearGradient
-                        id="pncsheen"
-                        x1="0"
-                        x2="1"
-                        y1="0"
-                        y2="1"
-                      >
-                        <stop offset="0" stopColor="#10b981" />
-                        <stop offset="0.55" stopColor="#38bdf8" />
-                        <stop offset="1" stopColor="#a78bfa" />
-                      </linearGradient>
-                    </defs>
-                    <rect
-                      x="12"
-                      y="12"
-                      width="376"
-                      height="176"
-                      rx="24"
-                      fill="white"
-                      opacity="0.7"
-                    />
-                    <circle cx="140" cy="110" r="52" fill="url(#pncsheen)" />
-                    <circle cx="265" cy="110" r="44" fill="url(#pncsheen)" />
-                    <circle cx="120" cy="95" r="7" fill="#0f172a" />
-                    <circle cx="160" cy="95" r="7" fill="#0f172a" />
-                    <path
-                      d="M135 120c10 10 20 10 30 0"
-                      stroke="#0f172a"
-                      strokeWidth="6"
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                    <circle cx="248" cy="98" r="6" fill="#0f172a" />
-                    <circle cx="280" cy="98" r="6" fill="#0f172a" />
-                    <path
-                      d="M260 122c8 8 16 8 24 0"
-                      stroke="#0f172a"
-                      strokeWidth="6"
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                    <path
-                      d="M98 74c-18 10-22 26-12 40"
-                      stroke="#0f172a"
-                      strokeWidth="6"
-                      strokeLinecap="round"
-                      fill="none"
-                      opacity="0.5"
-                    />
-                    <path
-                      d="M302 70c18 10 22 26 12 40"
-                      stroke="#0f172a"
-                      strokeWidth="6"
-                      strokeLinecap="round"
-                      fill="none"
-                      opacity="0.5"
-                    />
-                  </svg>
-                  <p className="mt-2 text-center text-xs text-zinc-600">
-                    Friendly, clean, and consistent care—every visit.
-                  </p>
+                <div className="mt-6">
+                  <DogCarousel />
                 </div>
               </div>
             </div>

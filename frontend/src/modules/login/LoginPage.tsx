@@ -2,19 +2,50 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export function LoginPage() {
+  const supabase = createClient();
+
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", username: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: wire up authentication
-    console.log("Customer login:", form);
+    setLoading(true);
+    setError(null);
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword(
+      {
+        email: form.email,
+        password: form.password,
+      },
+    );
+
+    if (signInError) {
+      setError(signInError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data.session) {
+      setError("We could not start a session. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // On successful login, take the user to their account
+    router.push("/account");
   };
 
   return (
@@ -154,15 +185,21 @@ export function LoginPage() {
               </div>
             </div>
 
+            {/* Error */}
+            {error && (
+              <p className="text-xs text-red-500 text-center">{error}</p>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
+              disabled={loading}
               style={{
                 background: "linear-gradient(to right, #01e7e5, #d90097)",
               }}
-              className="w-full py-2.5 px-4 text-white text-sm font-semibold rounded-lg transition shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2"
+              className="w-full py-2.5 px-4 text-white text-sm font-semibold rounded-lg transition shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
 

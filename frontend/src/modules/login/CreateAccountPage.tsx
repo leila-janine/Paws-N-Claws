@@ -3,15 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export function CreateAccountPage() {
+  const supabase = createClient();
+
   const [form, setForm] = useState({
     email: "",
     username: "",
     password: "",
     confirmPassword: "",
   });
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,13 +25,40 @@ export function CreateAccountPage() {
     setError("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
-    // TODO: wire up account creation, then redirect
+
+    setLoading(true);
+    setError("");
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: {
+          username: form.username,
+        },
+      },
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data.user) {
+      setError("We could not create your account. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // After successful sign up, send the user to login
     router.push("/login");
   };
 
@@ -140,12 +173,13 @@ export function CreateAccountPage() {
             {/* Submit */}
             <button
               type="submit"
+              disabled={loading}
               style={{
                 background: "linear-gradient(to right, #01e7e5, #d90097)",
               }}
-              className="w-full py-2.5 px-4 text-white text-sm font-semibold rounded-lg transition shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2"
+              className="w-full py-2.5 px-4 text-white text-sm font-semibold rounded-lg transition shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create account
+              {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
 
