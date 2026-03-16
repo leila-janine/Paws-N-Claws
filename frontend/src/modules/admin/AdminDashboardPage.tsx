@@ -6,18 +6,17 @@ import { createClient } from "@/lib/supabase/client";
 
 type Booking = {
   id: string;
-  Customer_id: string;
-  Pet_id: string;
-  Service_type: string;
-  Appointment_date: string;
-  Appointment_time: string;
+  Customer_ID: string;
+  Pet_ID: string;
+  Appointment_Date: string;
+  Start_Time: string;
   Status: string | null;
-  Notes: string | null;
+  Special_Notes: string | null;
   created_at?: string;
 };
 
 type Pet = {
-  id: string;
+  Pet_ID: string;
   Pet_Name: string;
 };
 
@@ -55,16 +54,19 @@ export function AdminDashboardPage() {
         return;
       }
 
-      const [{ data: bookingData, error: bookingError }, { data: petData, error: petError }] =
+      const [
+        { data: bookingData, error: bookingError },
+        { data: petData, error: petError },
+      ] =
         await Promise.all([
           supabase
-            .from("BOOKING")
+            .from("APPOINTMENT")
             .select(
-              "id, Customer_id, Pet_id, Service_type, Appointment_date, Appointment_time, Status, Notes, created_at",
+              "Appointment_ID, Customer_ID, Pet_ID, Appointment_Date, Start_Time, Status, Special_Notes",
             )
-            .order("Appointment_date", { ascending: true })
-            .order("Appointment_time", { ascending: true }),
-          supabase.from("PET").select("id, Pet_Name"),
+            .order("Appointment_Date", { ascending: true })
+            .order("Start_Time", { ascending: true }),
+          supabase.from("PET").select("Pet_ID, Pet_Name"),
         ]);
 
       if (bookingError) {
@@ -77,11 +79,21 @@ export function AdminDashboardPage() {
         setError(petError.message);
       }
 
-      setBookings((bookingData ?? []) as Booking[]);
+      const normalizedBookings = (bookingData ?? []).map((b: any) => ({
+        id: String(b.Appointment_ID),
+        Customer_ID: b.Customer_ID,
+        Pet_ID: b.Pet_ID,
+        Appointment_Date: b.Appointment_Date,
+        Start_Time: b.Start_Time,
+        Status: b.Status ?? null,
+        Special_Notes: b.Special_Notes ?? null,
+      })) as Booking[];
+
+      setBookings(normalizedBookings);
 
       const petLookup: Record<string, Pet> = {};
       (petData ?? []).forEach((p: any) => {
-        petLookup[p.id] = p;
+        petLookup[p.Pet_ID] = p;
       });
       setPetsById(petLookup);
 
@@ -103,9 +115,9 @@ export function AdminDashboardPage() {
     setError(null);
 
     const { error: updateError } = await supabase
-      .from("BOOKING")
+      .from("APPOINTMENT")
       .update({ Status: nextStatus })
-      .eq("id", booking.id);
+      .eq("Appointment_ID", booking.id);
 
     if (updateError) {
       setError(updateError.message);
@@ -122,18 +134,18 @@ export function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+    <div className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-slate-50/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-sky-400 text-slate-950 text-sm font-semibold">
-              P
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+              <span className="text-sm font-semibold text-slate-900">P</span>
             </span>
             <div>
               <p className="text-sm font-semibold tracking-tight">
                 Paws N Claws
               </p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Admin scheduling dashboard
               </p>
             </div>
@@ -141,13 +153,13 @@ export function AdminDashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               Bookings overview
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-500">
               See all requested appointments and update their status as you
               work.
             </p>
@@ -157,7 +169,7 @@ export function AdminDashboardPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
             >
               <option value="All">All statuses</option>
               {STATUS_OPTIONS.map((status) => (
@@ -169,24 +181,23 @@ export function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg">
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
           {loading ? (
-            <div className="px-4 py-10 text-center text-sm text-slate-400">
+            <div className="px-4 py-10 text-center text-sm text-slate-500">
               Loading bookings...
             </div>
           ) : filteredBookings.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-slate-400">
+            <div className="px-4 py-10 text-center text-sm text-slate-500">
               No bookings found yet.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-xs sm:text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400">
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
                     <th className="px-4 py-3 font-medium">Date</th>
                     <th className="px-4 py-3 font-medium">Time</th>
                     <th className="px-4 py-3 font-medium">Pet</th>
-                    <th className="px-4 py-3 font-medium">Service</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Notes</th>
                     <th className="px-4 py-3 font-medium text-right">
@@ -196,46 +207,43 @@ export function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {filteredBookings.map((booking) => {
-                    const pet = petsById[booking.Pet_id];
+                    const pet = petsById[booking.Pet_ID];
                     const currentStatus = booking.Status ?? "Pending";
 
                     return (
                       <tr
                         key={booking.id}
-                        className="border-b border-slate-800/80 last:border-0 hover:bg-slate-900/60"
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80"
                       >
-                        <td className="px-4 py-3 align-top text-slate-100">
-                          {booking.Appointment_date}
+                        <td className="px-4 py-3 align-top text-slate-900">
+                          {booking.Appointment_Date}
                         </td>
-                        <td className="px-4 py-3 align-top text-slate-100">
-                          {booking.Appointment_time}
+                        <td className="px-4 py-3 align-top text-slate-900">
+                          {booking.Start_Time}
                         </td>
                         <td className="px-4 py-3 align-top">
-                          <p className="font-medium text-slate-50">
+                          <p className="font-medium text-slate-900">
                             {pet?.Pet_Name ?? "Unknown pet"}
                           </p>
-                        </td>
-                        <td className="px-4 py-3 align-top text-slate-100">
-                          {booking.Service_type}
                         </td>
                         <td className="px-4 py-3 align-top">
                           <span
                             className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${
                               currentStatus === "Completed"
-                                ? "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/40"
+                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
                                 : currentStatus === "Confirmed"
-                                  ? "bg-sky-500/10 text-sky-300 ring-1 ring-sky-500/40"
+                                  ? "bg-sky-50 text-sky-700 ring-1 ring-sky-200"
                                   : currentStatus === "Cancelled"
-                                    ? "bg-rose-500/10 text-rose-300 ring-1 ring-rose-500/40"
-                                    : "bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/40"
+                                    ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+                                    : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
                             }`}
                           >
                             {currentStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-3 align-top max-w-xs text-slate-200">
+                        <td className="px-4 py-3 align-top max-w-xs text-slate-700">
                           <p className="line-clamp-3">
-                            {booking.Notes || "—"}
+                            {booking.Special_Notes || "—"}
                           </p>
                         </td>
                         <td className="px-4 py-3 align-top text-right">
@@ -250,8 +258,8 @@ export function AdminDashboardPage() {
                                 disabled={updatingId === booking.id}
                                 className={`rounded-full px-2 py-1 text-[11px] font-medium transition ${
                                   currentStatus === status
-                                    ? "bg-slate-50 text-slate-900"
-                                    : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                                    ? "bg-slate-900 text-white"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                               >
                                 {status}
@@ -269,7 +277,7 @@ export function AdminDashboardPage() {
         </div>
 
         {error && (
-          <p className="mt-4 text-xs text-rose-400 text-center">{error}</p>
+          <p className="mt-4 text-xs text-rose-500 text-center">{error}</p>
         )}
       </main>
     </div>

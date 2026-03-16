@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 
 const DOG_IMAGES = [
   {
-    src: "/dogs/dog-groom-1.jpg",
-    alt: "Cute white dog at the grooming salon being brushed",
+    src: "/dogs/img5.jpg",
+    alt: "Small white dog with a bow being groomed at the salon",
   },
   {
-    src: "/dogs/dog-groom-2.jpg",
-    alt: "Pet groomer brushing a dog's hair with a comb",
+    src: "/dogs/img2.jpg",
+    alt: "Golden retriever being washed in a grooming tub",
   },
   {
-    src: "/dogs/dog-groom-3.jpg",
-    alt: "Dog relaxing while being groomed on a couch",
+    src: "/dogs/img3.jpg",
+    alt: "Groomer brushing a fluffy dog on the grooming table",
   },
 ];
 

@@ -44,8 +44,8 @@ export function LoginPage() {
       return;
     }
 
-    // On successful login, take the user to their account
-    router.push("/account");
+    // On successful login, take the user to the home dashboard
+    router.push("/");
   };
 
   return (

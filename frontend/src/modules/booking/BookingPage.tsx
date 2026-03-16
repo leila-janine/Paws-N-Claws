@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 type Pet = {
-  id: string;
+  Pet_ID: string;
   Pet_Name: string;
 };
 
@@ -21,6 +22,7 @@ export function BookingPage() {
 
   const [pets, setPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
+  const [bookedTimes, setBookedTimes] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState({
     petId: "",
@@ -58,8 +60,8 @@ export function BookingPage() {
 
       const { data, error: petsError } = await supabase
         .from("PET")
-        .select("id, Pet_Name")
-        .eq("Customer_id", user.id)
+        .select("Pet_ID, Pet_Name")
+        .eq("Customer_ID", user.id)
         .order("Pet_Name");
 
       if (petsError) {
@@ -73,6 +75,46 @@ export function BookingPage() {
 
     fetchPets();
   }, [supabase]);
+
+  useEffect(() => {
+    const loadBookedTimes = async () => {
+      if (!form.date) {
+        setBookedTimes(new Set());
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("APPOINTMENT")
+        .select("Start_Time")
+        .eq("Appointment_Date", form.date);
+
+      if (error || !data) {
+        setBookedTimes(new Set());
+        return;
+      }
+
+      const times = new Set<string>(
+        data.map((row: any) => String(row.Start_Time)).filter(Boolean),
+      );
+      setBookedTimes(times);
+    };
+
+    loadBookedTimes();
+  }, [supabase, form.date]);
+
+  const timeOptions = (() => {
+    const opts: string[] = [];
+    // 9:00 to 18:00 every 30 minutes
+    for (let h = 9; h <= 18; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        if (h === 18 && m > 0) continue;
+        const hh = String(h).padStart(2, "0");
+        const mm = String(m).padStart(2, "0");
+        opts.push(`${hh}:${mm}:00`);
+      }
+    }
+    return opts;
+  })();
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -105,13 +147,48 @@ export function BookingPage() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("BOOKING").insert({
-      Customer_id: user.id,
-      Pet_id: form.petId,
-      Service_type: form.service,
-      Appointment_date: form.date,
-      Appointment_time: form.time,
-      Notes: form.notes,
+    const firstName =
+      (user.user_metadata as any)?.first_name ??
+      (user.user_metadata as any)?.given_name ??
+      (user.user_metadata as any)?.full_name ??
+      "Customer";
+    const lastName =
+      (user.user_metadata as any)?.last_name ??
+      (user.user_metadata as any)?.family_name ??
+      "";
+    const phone =
+      (user.user_metadata as any)?.phone ??
+      (user.user_metadata as any)?.phone_number ??
+      "";
+
+    const { error: customerError } = await supabase
+      .from("CUSTOMER")
+      .upsert(
+        {
+          Customer_ID: user.id,
+          Email: user.email,
+          First_Name: firstName,
+          Last_Name: lastName,
+          Phone_Number: phone,
+        },
+        {
+          onConflict: "Customer_ID",
+        },
+      );
+
+    if (customerError) {
+      setError(customerError.message);
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("APPOINTMENT").insert({
+      Customer_ID: user.id,
+      Pet_ID: form.petId,
+      Appointment_Date: form.date,
+      Start_Time: form.time,
+      Status: "Pending",
+      Special_Notes: `${form.service}${form.notes ? ` — ${form.notes}` : ""}`,
     });
 
     if (insertError) {
@@ -163,12 +240,21 @@ export function BookingPage() {
               We&apos;ve received your booking details. You&apos;ll hear from us
               soon.
             </p>
-            <button
-              onClick={() => setSuccess(false)}
-              className="mt-5 text-sm font-medium text-blue-500 hover:text-blue-600 transition"
-            >
-              + Make another booking
-            </button>
+            <div className="mt-6 grid gap-3">
+              <Link
+                href="/"
+                className="w-full py-2.5 px-4 text-sm font-semibold rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50 transition"
+              >
+                Go to home
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSuccess(false)}
+                className="text-sm font-medium text-blue-500 hover:text-blue-600 transition"
+              >
+                + Make another booking
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -199,7 +285,7 @@ export function BookingPage() {
                       Select a pet
                     </option>
                     {pets.map((pet) => (
-                      <option key={pet.id} value={pet.id}>
+                      <option key={pet.Pet_ID} value={pet.Pet_ID}>
                         {pet.Pet_Name}
                       </option>
                     ))}
@@ -240,15 +326,33 @@ export function BookingPage() {
                 >
                   Time
                 </label>
-                <input
+                <select
                   id="time"
                   name="time"
-                  type="time"
                   required
                   value={form.time}
                   onChange={handleChange}
                   className="w-full px-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-                />
+                >
+                  <option value="" disabled>
+                    Select a time
+                  </option>
+                  {timeOptions.map((t) => {
+                    const isBooked = bookedTimes.has(t);
+                    const label = t.slice(0, 5); // HH:MM
+                    return (
+                      <option
+                        key={t}
+                        value={t}
+                        disabled={isBooked}
+                        className={isBooked ? "text-red-500" : ""}
+                      >
+                        {label}
+                        {isBooked ? " • booked" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
             </div>
 
